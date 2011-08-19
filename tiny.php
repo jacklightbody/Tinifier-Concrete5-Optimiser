@@ -77,7 +77,7 @@ class TinyHelper {
 				foreach($cssCombine as $css){				
 					$cssFile=BASE_URL.$css;
 			 		$cssFileContents=$file->getContents($cssFile);
-			 		$cssFileContent=preg_replace("#\((.*)\)#is", '('.$css.'$1'.')', $cssFileContents);
+			 		//$cssFileContent=preg_replace("#\url((.*)\)#is", '('.$css.'$1'.')', $cssFileContents);
 			 		$cssCompress=cssCompress($cssFileContents);
 					file_put_contents($cssFileMerge, $cssCompress, FILE_APPEND);	
 				}
