@@ -29,10 +29,10 @@ class TinyHelper {
 			$cssCombine=array();
 			$unknownCss=array();
 			$unknownJs=array();
-						// Get all the javascript links to files and put their content in the merge js file			
+			// Get all the javascript links to files and put their content in the merge js file			
 			if ( preg_match_all( '#<\s*script\s*(type="text/javascript"\s*)?src=.+<\s*/script\s*>#smUi',$content,$jsLinks )) {
 				foreach ( $jsLinks[0] as $jsLink ) {
-					if(preg_match('/<head>.*<script type="text\/javascript" src="(.*)"><\/script>.*</head>/', $jsLink )){
+					if(preg_match('/<script type="text\/javascript" src="(.*)"><\/script>/', $jsLink )){
          				$jsItem= preg_replace('/<script type="text\/javascript" src="(.*)"><\/script>/', '$1', $jsLink);// get whats in href attr  
          				array_push($jsCombine, $jsItem);
          			}else{
