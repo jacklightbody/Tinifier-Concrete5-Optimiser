@@ -10,7 +10,7 @@
 	Copyright   (c) 2011 Jack Lightbody <12345j.co.cc>
 	@license 	Mit Open Source
 	@github     https://github.com/12345j/Tinifier-Concrete5-Optimiser
-	@version    1.3.6
+	@version    1.3.7
 */
 defined( 'C5_EXECUTE' ) or die( "Access Denied." );
 
@@ -32,7 +32,7 @@ class TinyHelper {
 						// Get all the javascript links to files and put their content in the merge js file			
 			if ( preg_match_all( '#<\s*script\s*(type="text/javascript"\s*)?src=.+<\s*/script\s*>#smUi',$content,$jsLinks )) {
 				foreach ( $jsLinks[0] as $jsLink ) {
-					if(preg_match('/<script type="text\/javascript" src="(.*)"><\/script>/', $jsLink )){
+					if(preg_match('/<head>.*<script type="text\/javascript" src="(.*)"><\/script>.*</head>/', $jsLink )){
          				$jsItem= preg_replace('/<script type="text\/javascript" src="(.*)"><\/script>/', '$1', $jsLink);// get whats in href attr  
          				array_push($jsCombine, $jsItem);
          			}else{
@@ -41,13 +41,13 @@ class TinyHelper {
          			$content=str_replace($jsLink, '', $content);
 				}	
 				foreach ($jsCombine as $js){
-				$external = 'http://';
-				$externalFile = strpos($js, $external);
-				if($externalFile === false){
-					$jsFile=BASE_URL.$js;
-				}else{
-					$jsFile=$js;
-				}
+					$external = 'http://';
+					$externalFile = strpos($js, $external);
+					if($externalFile === false){
+						$jsFile=BASE_URL.$js;
+					}else{
+						$jsFile=$js;
+					}
 			 		$jsFileContents=$file->getContents($jsFile);
 					/*Compressing the js takes way too long so we just insert the uncompressed stuff. TODO: Speed it up- if its a not new version then don't compress it again. Do this with css too */
 					//Loader::library( '3rdparty/jsmin' );
@@ -92,6 +92,9 @@ class TinyHelper {
 						$content=str_replace($Inlinecssitem, '', $content);
 					}	
 				}
+				foreach($unknownJs as $jsU){
+					$content=str_ireplace('</body>', $jsU.'</body>', $content);	// add the js link to the end					
+				}
 				foreach($unknownCss as $cssU){
 					$content=str_ireplace( '</head>',$cssU.'</head>', $content );	// add the stylesheet link to the head					
 				}
@@ -100,11 +103,11 @@ class TinyHelper {
 				return $content;	
 		}}
 		function cssCompress($string) {
-		/* remove comments */
+			/* remove comments */
 		    $string = preg_replace('!/\*[^*]*\*+([^/][^*]*\*+)*/!', '', $string);
-		/* remove tabs, spaces, new lines, etc. */        
+			/* remove tabs, spaces, new lines, etc. */        
 		    $string = str_replace(array("\r\n", "\r", "\n", "\t", '  ', '    ', '    '), '', $string);
-		/* remove unnecessary spaces */        
+			/* remove unnecessary spaces */        
 		    $string = str_replace('{ ', '{', $string);
 		    $string = str_replace(' }', '}', $string);
 		    $string = str_replace('; ', ';', $string);
@@ -114,5 +117,5 @@ class TinyHelper {
 		    $string = str_replace(': ', ':', $string);
 		    $string = str_replace(' ,', ',', $string);
 		    $string = str_replace(' ;', ';', $string); 
-		return $string;
+			return $string;
 		}
