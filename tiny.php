@@ -98,7 +98,7 @@ class TinyHelper {
 				foreach($unknownCss as $cssU){
 					$content=str_ireplace( '</head>',$cssU.'</head>', $content );	// add the stylesheet link to the head					
 				}
-				$content =  str_ireplace( '</head>','<link rel="stylesheet" type="text/css" href="'.ASSETS_URL_WEB.'/css/merge.css" /><!--Compressed by Tinifier v1.3.6--></head>', $content );	// add the stylesheet link to the head
+				$content =  str_ireplace( '</head>','<link rel="stylesheet" type="text/css" href="'.ASSETS_URL_WEB.'/css/merge.css" /><!--Compressed by Tinifier v1.3.7--></head>', $content );	// add the stylesheet link to the head
 				$content = preg_replace('/(?:(?<=\>)|(?<=\/\)))(\s+)(?=\<\/?)/','',$content);//remove html whitespace
 				return $content;	
 		}}
