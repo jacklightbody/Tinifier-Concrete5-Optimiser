@@ -1,1 +1,18 @@
-A method of speeding up your concrete5 site. Full docs coming soon.
+A method of speeding up your concrete5 site. Note that tinifier is still a beta version, and to use on production sites with care.
+
+Installation instructions-
+1) download tinifier
+2) move view.php to the root/libraries directory of your site
+3) move tiny.php to the root/helpers directory of your site.
+4) enjoy!
+
+Debug  Instructions
+1) create a new user that I can login in as with a name of say debugj
+2) replace line 775 of the view.php file - currently
+if(!$cp->canWrite() && !$c->isSystemPage()){
+with 
+$u = new User();
+if($u->getUserName()=="debugj"{
+3) email jack.lightbody@gmail.com the login details to the concrete5 backend and ftp
+
+this will ensure that I can take a look at your site, but no one else will be able to see tinifier.
