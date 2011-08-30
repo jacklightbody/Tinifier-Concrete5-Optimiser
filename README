@@ -5,7 +5,7 @@ Installation instructions-
 2) move view.php to the root/libraries directory of your site
 3) move tiny.php to the root/helpers directory of your site.
 4) enjoy!
-
+If you are having javascript issues, copy tiny-js.php to root/helpers  and rename to tiny.php. Also, javascript with a class of nocombine will be ignored.
 Debug  Instructions
 1) create a new user that I can login in as with a name of say debugj
 2) replace line 775 of the view.php file - currently
