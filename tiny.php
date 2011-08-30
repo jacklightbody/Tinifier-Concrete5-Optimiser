@@ -10,7 +10,7 @@
 	Copyright   (c) 2011 Jack Lightbody <12345j.co.cc>
 	@license 	Mit Open Source
 	@github     https://github.com/12345j/Tinifier-Concrete5-Optimiser
-	@version    1.3.7
+	@version    1.3.8
 */
 defined( 'C5_EXECUTE' ) or die( "Access Denied." );
 
@@ -35,10 +35,12 @@ class TinyHelper {
 					if(preg_match('/<script type="text\/javascript" src="(.*)"><\/script>/', $jsLink )){
          				$jsItem= preg_replace('/<script type="text\/javascript" src="(.*)"><\/script>/', '$1', $jsLink);// get whats in href attr  
          				array_push($jsCombine, $jsItem);
+         				$content=str_replace($jsLink, '', $content);
+         			}elseif(preg_match('/<script.*class="nocombine".*<\/script>/', $jsLink )){
          			}else{
          				array_push($unknownJs, $jsLink);
+         				$content=str_replace($jsLink, '', $content);
          			}
-         			$content=str_replace($jsLink, '', $content);
 				}	
 				foreach ($jsCombine as $js){
 					$external = 'http://';
@@ -98,7 +100,7 @@ class TinyHelper {
 				foreach($unknownCss as $cssU){
 					$content=str_ireplace( '</head>',$cssU.'</head>', $content );	// add the stylesheet link to the head					
 				}
-				$content =  str_ireplace( '</head>','<link rel="stylesheet" type="text/css" href="'.ASSETS_URL_WEB.'/css/merge.css" /><!--Compressed by Tinifier v1.3.7--></head>', $content );	// add the stylesheet link to the head
+				$content =  str_ireplace( '</head>','<link rel="stylesheet" type="text/css" href="'.ASSETS_URL_WEB.'/css/merge.css" /><!--Compressed by Tinifier v1.3.8--></head>', $content );	// add the stylesheet link to the head
 				$content = preg_replace('/(?:(?<=\>)|(?<=\/\)))(\s+)(?=\<\/?)/','',$content);//remove html whitespace
 				return $content;	
 		}}
