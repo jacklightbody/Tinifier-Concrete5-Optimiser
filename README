@@ -13,6 +13,6 @@ if(!$cp->canWrite() && !$c->isSystemPage()){
 with 
 $u = new User();
 if($u->getUserName()=="debugj"{
-3) email jack.lightbody@gmail.com the login details to the concrete5 backend and ftp
+3) private message me through c5 at http://www.concrete5.org/profile/-/view/27444/ the login details to the concrete5 backend and ftp
 
 this will ensure that I can take a look at your site, but no one else will be able to see tinifier.
