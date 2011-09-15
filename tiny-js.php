@@ -6,30 +6,32 @@
 
 	@file 		tiny.php
 	@date 		2011-05-27 22:20:36 -0400 (Wed, 1 June 2011)
+	@update		2011-9-14
 	@author 	Jack Lightbody <jack.lightbody@gmail.com>
 	Copyright   (c) 2011 Jack Lightbody <12345j.co.cc>
 	@license 	Mit Open Source
 	@github     https://github.com/12345j/Tinifier-Concrete5-Optimiser
-	@version    1.3.7
+	@version    1.5
 */
 defined( 'C5_EXECUTE' ) or die( "Access Denied." );
 
 class TinyHelper {
 		public function tinify( $content ){
+			$var=1;
 			$file=loader::helper('file');
-			$jsFileMerge = DIRNAME_JAVASCRIPT."/merge.js";
-			$cssFileMerge = DIRNAME_CSS."/merge.css";
+			$page = Page::getCurrentPage();
+			$cssFileMerge = DIRNAME_CSS."/merge-".$page->getCollectionID()."-".$page->getVersion().".css";
 			if(file_exists($cssFileMerge)){
+				$var=0;
+				$diff=$page->getCollectionID()-1;
+				$cssFileMergePrev = DIRNAME_CSS."/merge-".$diff."-".$page->getVersion().".css";
 				unlink($cssFileMerge);
-			}
-			if(file_exists($jsFileMerge)){
-				unlink($jsFileMerge);
 			}
 			$jsCombine=array();
 			$cssCombine=array();
 			$unknownCss=array();
 			$unknownJs=array();
-			// Get all the javascript links to files and put their content in the merge js file			
+			// Get all the javascript links to files and put their content at the bottom	
 			if ( preg_match_all( '#<\s*script\s*(type="text/javascript"\s*)?src=.+<\s*/script\s*>#smUi',$content,$jsLinks )) {
 				foreach ( $jsLinks[0] as $jsLink ) {
 					$content=str_replace($jsLink, '', $content);
@@ -43,23 +45,25 @@ class TinyHelper {
 					$content=str_replace('</body>', $inlineItem.'</body>', $content);
 				}	
 			}
-			// get all the css links and add to merge
-			if ( preg_match_all( '#<\s*link\s*rel="?stylesheet"?.+>#smUi',$content,$cssLinks )) {
-				foreach ($cssLinks[0] as $cssLink ) {
-					if(preg_match('/<link rel="stylesheet" type="text\/css" href="(.*)" \/>/', $cssLink )){
-         					$cssItem= preg_replace('/<link rel="stylesheet" type="text\/css" href="(.*)" \/>/', '$1', $cssLink);// get whats in href attr  
-         					array_push($cssCombine, $cssItem);
-         				}else{
-         					array_push($unknownCss, $cssLink);
-         				}
-         				$content=str_replace($cssLink, '', $content);
-				}	
-				foreach($cssCombine as $css){				
-					$cssFile=BASE_URL.$css;
-			 		$cssFileContents=$file->getContents($cssFile);
-			 		//$cssFileContent=preg_replace("#\url((.*)\)#is", '('.$css.'$1'.')', $cssFileContents);
-			 		$cssCompress=cssCompress($cssFileContents);
-					file_put_contents($cssFileMerge, $cssCompress, FILE_APPEND);	
+			if($var==1){
+				// get all the css links and add to merge
+				if ( preg_match_all( '#<\s*link\s*rel="?stylesheet"?.+>#smUi',$content,$cssLinks )) {
+				    foreach ($cssLinks[0] as $cssLink ) {
+				    	if(preg_match('/<link rel="stylesheet" type="text\/css" href="(.*)" \/>/', $cssLink )){
+         		    			$cssItem= preg_replace('/<link rel="stylesheet" type="text\/css" href="(.*)" \/>/', '$1', $cssLink);// get whats in href attr  
+         		    			array_push($cssCombine, $cssItem);
+         		    		}else{
+         		    			array_push($unknownCss, $cssLink);
+         		    		}
+         		    		$content=str_replace($cssLink, '', $content);
+				    }	
+				    foreach($cssCombine as $css){				
+				    	$cssFile=BASE_URL.$css;
+				 		$cssFileContents=$file->getContents($cssFile);
+				 		//$cssFileContent=preg_replace("#\url((.*)\)#is", '('.$css.'$1'.')', $cssFileContents);
+				 		$cssCompress=cssCompress($cssFileContents);
+				    	file_put_contents($cssFileMerge, $cssCompress, FILE_APPEND);	
+				    }
 				}
 			}
 				// get all the inline css and add to merge
@@ -78,7 +82,7 @@ class TinyHelper {
 				foreach($unknownCss as $cssU){
 					$content=str_ireplace( '</head>',$cssU.'</head>', $content );	// add the stylesheet link to the head					
 				}
-				$content =  str_ireplace( '</head>','<link rel="stylesheet" type="text/css" href="'.ASSETS_URL_WEB.'/css/merge.css" /><!--Compressed by Tinifier v1.3.7--></head>', $content );	// add the stylesheet link to the head
+				$content =  str_ireplace( '</head>','<link rel="stylesheet" type="text/css" href="'.ASSETS_URL_WEB.'/'.DIRNAME_CSS.'/merge-'.$page->getCollectionID().'-'.$page->getVersion().'.css" /><!--Compressed by Tinifier v1.5--></head>', $content );	// add the stylesheet link to the head
 				$content = preg_replace('/(?:(?<=\>)|(?<=\/\)))(\s+)(?=\<\/?)/','',$content);//remove html whitespace
 				return $content;	
 		}}
