@@ -16,19 +16,21 @@
 defined( 'C5_EXECUTE' ) or die( "Access Denied." );
 
 class TinyHelper {
+		private $jscompress=1;
+		private $csscompress=1;
 		public function tinify( $content ){
 			$var=1;
 			$file=loader::helper('file');
 			$page = Page::getCurrentPage();
 			$jsFileMerge = DIRNAME_JAVASCRIPT."/merge-".$page->getCollectionID()."-".$page->getVersion().".js";
 			$cssFileMerge = DIRNAME_CSS."/merge-".$page->getCollectionID()."-".$page->getVersion().".css";
-			if(file_exists($cssFileMerge)){
+			if(file_exists($cssFileMerge)&&$this->csscompress==1){
 				$var=0;
 				$diff=$page->getCollectionID()-1;
 				$cssFileMergePrev = DIRNAME_CSS."/merge-".$diff."-".$page->getVersion().".css";
 				unlink($cssFileMerge);
 			}
-			if(file_exists($jsFileMerge)){
+			if(file_exists($jsFileMerge)&&$this->jscompress==1){
 				$var=0;
 				$diff=$page->getCollectionID()-1;
 				$jsFileMergePrev = DIRNAME_JAVASCRIPT."/merge-".$diff."-".$page->getVersion().".js";
@@ -43,49 +45,63 @@ class TinyHelper {
 				$unknownJs=array();
 				// Get all the javascript links to files and put their content in the merge js file			
 				if ( preg_match_all( '#<\s*script\s*(type="text/javascript"\s*)?src=.+<\s*/script\s*>#smUi',$content,$jsLinks )) {
-					foreach ( $jsLinks[0] as $jsLink ) {
-						if(preg_match('/<script type="text\/javascript" src="(.*)"><\/script>/', $jsLink )){
-         					$jsItem= preg_replace('/<script type="text\/javascript" src="(.*)"><\/script>/', '$1', $jsLink);// get whats in href attr  
-         					array_push($jsCombine, $jsItem);
-         					$content=str_replace($jsLink, '', $content);
-         				}elseif(preg_match('/<script.*class="nocombine".*<\/script>/', $jsLink )){
-         				}else{
-         					array_push($unknownJs, $jsLink);
-         					$content=str_replace($jsLink, '', $content);
-         				}
-					}	
-					foreach ($jsCombine as $js){
-						$external = 'http://';
-						$externalFile = strpos($js, $external);
-						if($externalFile === false){
-							$jsFile=BASE_URL.$js;
-						}else{
-							$jsFile=$js;
-						}
-				 		$jsFileContents=$file->getContents($jsFile);
-						/*Compressing the js takes way too long so we just insert the uncompressed stuff. TODO: Speed it up- if its a not new version then don't compress it again. Do this with css too */
-						//Loader::library( '3rdparty/jsmin' );
-						//$jsCompress=JSMin::minify( $jsFileContents );	
-						file_put_contents($jsFileMerge, $jsFileContents, FILE_APPEND);
-					}	
+					if($this->jscompress==1){
+						foreach ( $jsLinks[0] as $jsLink ) {
+							if(preg_match('/<script type="text\/javascript" src="(.*)"><\/script>/', $jsLink )){
+	         					$jsItem= preg_replace('/<script type="text\/javascript" src="(.*)"><\/script>/', '$1', $jsLink);// get whats in href attr  
+	         					array_push($jsCombine, $jsItem);
+	         					$content=str_replace($jsLink, '', $content);
+	         				}elseif(preg_match('/<script.*class="nocombine".*<\/script>/', $jsLink )){
+	         				}else{
+	         					array_push($unknownJs, $jsLink);
+	         					$content=str_replace($jsLink, '', $content);
+	         				}
+						}	
+						foreach ($jsCombine as $js){
+							$external = 'http://';
+							$externalFile = strpos($js, $external);
+							if($externalFile === false){
+								$jsFile=BASE_URL.$js;
+							}else{
+								$jsFile=$js;
+							}
+					 		$jsFileContents=$file->getContents($jsFile);
+							/*Compressing the js takes way too long so we just insert the uncompressed stuff. TODO: Speed it up- if its a not new version then don't compress it again. Do this with css too */
+							//Loader::library( '3rdparty/jsmin' );
+							//$jsCompress=JSMin::minify( $jsFileContents );	
+							file_put_contents($jsFileMerge, $jsFileContents, FILE_APPEND);
+						}	
+					}else{
+						foreach ( $jsLinks[0] as $jsLink ) {
+							$content=str_replace($jsLink, '', $content);
+							$content=str_replace('</body>', $jsLink.'</body>', $content);
+						}	
+					}
 				}
 				// get all the css links and add to merge
 				if ( preg_match_all( '#<\s*link\s*rel="?stylesheet"?.+>#smUi',$content,$cssLinks )) {
-					foreach ($cssLinks[0] as $cssLink ) {
-						if(preg_match('/<link rel="stylesheet" type="text\/css" href="(.*)" \/>/', $cssLink )){
-         						$cssItem= preg_replace('/<link rel="stylesheet" type="text\/css" href="(.*)" \/>/', '$1', $cssLink);// get whats in href attr  
-         						array_push($cssCombine, $cssItem);
-         					}else{
-         						array_push($unknownCss, $cssLink);
-         					}
-         					$content=str_replace($cssLink, '', $content);
-					}	
-					foreach($cssCombine as $css){				
-						$cssFile=BASE_URL.$css;
-				 		$cssFileContents=$file->getContents($cssFile);
-				 		//$cssFileContent=preg_replace("#\url((.*)\)#is", '('.$css.'$1'.')', $cssFileContents);
-				 		$cssCompress=cssCompress($cssFileContents);
-						file_put_contents($cssFileMerge, $cssCompress, FILE_APPEND);	
+					if($this->csscompress==1){
+						foreach ($cssLinks[0] as $cssLink ) {
+							if(preg_match('/<link rel="stylesheet" type="text\/css" href="(.*)" \/>/', $cssLink )){
+	         						$cssItem= preg_replace('/<link rel="stylesheet" type="text\/css" href="(.*)" \/>/', '$1', $cssLink);// get whats in href attr  
+	         						array_push($cssCombine, $cssItem);
+	         					}else{
+	         						array_push($unknownCss, $cssLink);
+	         					}
+	         					$content=str_replace($cssLink, '', $content);
+						}	
+						foreach($cssCombine as $css){				
+							$cssFile=BASE_URL.$css;
+					 		$cssFileContents=$file->getContents($cssFile);
+					 		//$cssFileContent=preg_replace("#\url((.*)\)#is", '('.$css.'$1'.')', $cssFileContents);
+					 		$cssCompress=cssCompress($cssFileContents);
+							file_put_contents($cssFileMerge, $cssCompress, FILE_APPEND);	
+						}
+					}else{
+						foreach ( $cssLinks[0] as $cssLink ) {
+							$content=str_replace($cssLink, '', $content);
+							$content=str_replace('</head>', $cssLink.'</head>', $content);
+						}	
 					}
 				}
 				// get all the inline css and add to merge
