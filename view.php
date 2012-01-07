@@ -1,4 +1,4 @@
-<?php 
+<?
 
 defined('C5_EXECUTE') or die("Access Denied.");
 
@@ -36,6 +36,11 @@ defined('C5_EXECUTE') or die("Access Denied.");
 		 * An array of items that get loaded into a page's header
 		 */
 		private $headerItems = array();
+
+		/** 
+		 * An array of items that get loaded into just before body close
+		 */
+		private $footerItems = array();
 
 		/**
 		 * themePaths holds the various hard coded paths to themes
@@ -105,6 +110,14 @@ defined('C5_EXECUTE') or die("Access Denied.");
 			$this->headerItems[$namespace][] = $item;
 		}
 		
+		/** 
+		 * Function responsible for adding footer items within the context of a view.
+		 * @access private
+		 */
+		public function addFooterItem($item, $namespace = 'VIEW') {
+			$this->footerItems[$namespace][] = $item;
+		}
+		
 		public function getHeaderItems() {
 			$a1 = (is_array($this->headerItems['CORE'])) ? $this->headerItems['CORE'] : array();
 			$a2 = (is_array($this->headerItems['VIEW'])) ? $this->headerItems['VIEW'] : array();
@@ -118,6 +131,31 @@ defined('C5_EXECUTE') or die("Access Denied.");
 				$items = array_unique($items, SORT_STRING);
 			}
 			return $items;
+		}
+		
+		public function getFooterItems() {
+			$a1 = (is_array($this->footerItems['CORE'])) ? $this->footerItems['CORE'] : array();
+			$a2 = (is_array($this->footerItems['VIEW'])) ? $this->footerItems['VIEW'] : array();
+			$a3 = (is_array($this->footerItems['CONTROLLER'])) ? $this->footerItems['CONTROLLER'] : array();
+			$a4 = (is_array($this->footerItems['SCRIPT'])) ? $this->footerItems['SCRIPT'] : array();
+			
+			$items = array_merge($a1, $a2, $a3, $a4);
+			if (version_compare(PHP_VERSION, '5.2.9', '<')) {
+				$items = array_unique($items);
+			} else {
+				// stupid PHP
+				$items = array_unique($items, SORT_STRING);
+			}
+			
+			// also strip out anything that was in the header
+			$headerItems = $this->getHeaderItems();
+			$retitems = array();
+			foreach($items as $it) {
+				if (!in_array($it, $headerItems)) {
+					$retitems[] = $it;
+				}
+			}
+			return $retitems;
 		}
 		
 		/** 
@@ -135,53 +173,30 @@ defined('C5_EXECUTE') or die("Access Denied.");
 			$outputPost = array();
 			$output = array();
 			
-			/*
-			if (ENABLE_ASSET_COMPRESSION == true) {
-				foreach($items as $item) {
-					if (is_a($item, 'JavaScriptOutputObject')) {
-						$output['JAVASCRIPT'][dirname($item->file)][] = $item;
-					} else if (is_a($item, 'CSSOutputObject')) {
-						$output['CSS'][dirname($item->file)][] = $item;
-					} else {
-						$outputPost[] = $item;
-					}
-				}
-	
-				$html = Loader::helper("html");
-				foreach($output as $type => $item) {
-					switch($type) {
-						case 'JAVASCRIPT':
-							foreach($item as $base => $ind) {
-								$src = REL_DIR_FILES_TOOLS_REQUIRED . '/minify?b=' . trim($base, '/') . '&f=';
-								foreach($ind as $i) {
-									$src .= basename($i->file) . ',';
-								}
-								print $html->javascript(trim($src, ',')) . "\n";
-							}
-							break;
-						case 'CSS':
-							foreach($item as $base => $ind) {
-								$src = REL_DIR_FILES_TOOLS_REQUIRED . '/minify?b=' . trim($base, '/') . '&f=';
-								foreach($ind as $i) {
-									$src .= basename($i->file) . ',';
-								}
-								print $html->css(trim($src, ',')) . "\n";
-							}
-							break;					
-					}
-				}
-			} else {
-				$outputPost = $items;
-			}
-			*/
+			foreach($items as $hi) {
+				print $hi; // caled on two seperate lines because of pre php 5.2 __toString issues
+				print "\n";
+			}			
+			
+		}
+		
+		/** 
+		 * Function responsible for outputting footer items
+		 * @access private
+		 */
+		public function outputFooterItems() {
+			$items = $this->getFooterItems();
 			
 			foreach($items as $hi) {
 				print $hi; // caled on two seperate lines because of pre php 5.2 __toString issues
 				print "\n";
 			}
-			
-			
 		}
+
+		public function field($fieldName) {
+			return $this->controller->field($fieldName);
+		}
+		
 		
 		/** 
 		 * @access private
@@ -378,14 +393,16 @@ defined('C5_EXECUTE') or die("Access Denied.");
 
 		/**
 		 * checks the current view to see if you're in that page's "section" (top level)
+		 * (with one exception: passing in the home page url ('' or '/') will always return false)
 		 * @access public
 		 * @param string $url
 		 * @return boolean | void
 		*/	
 		public function section($url) {
-			if (is_object($this->c)) {
-				$cPath = $this->c->getCollectionPath();
-				if (strpos($cPath, '/' . $url) !== false && strpos($cPath, '/' . $url) == 0) {
+			$cPath = Page::getCurrentPage()->getCollectionPath();
+			if (!empty($cPath)) {
+				$url = '/' . trim($url, '/');
+				if (strpos($cPath, $url) !== false && strpos($cPath, $url) == 0) {
 					return true;
 				}
 			}
@@ -462,15 +479,28 @@ defined('C5_EXECUTE') or die("Access Denied.");
 		public function renderError($title, $error, $errorObj = null) {
 			$innerContent = $error;
 			$titleContent = $title; 
+			if (!isset($this) || (!$this)) {
+				$v = new View();
+				$v->setThemeForView(DIRNAME_THEMES_CORE, FILENAME_THEMES_ERROR . '.php', true);
+				include($v->getTheme());	
+				exit;
+			}
 			if (!isset($this->theme) || (!$this->theme) || (!file_exists($this->theme))) {
 				$this->setThemeForView(DIRNAME_THEMES_CORE, FILENAME_THEMES_ERROR . '.php', true);
 				include($this->theme);	
+				exit;			
 			} else {
 				Loader::element('error_fatal', array('innerContent' => $innerContent, 
 					'titleContent' => $titleContent));
 			}
 		}
 		
+		/** 
+		 * @private 
+		 */
+		public static function defaultExceptionHandler($e) {
+			View::renderError(t('An unexpected error occurred.'), $e->getMessage(), $e);
+		}
 
 		/**
 		 * sets the current theme
@@ -567,8 +597,10 @@ defined('C5_EXECUTE') or die("Access Denied.");
 			$this->themeDir = $themeDir;
 			$this->themePkgID = $pkgID;
 		}
-				
-				
+		public function escape($text){
+			Loader::helper('text');
+			return TextHelper::sanitize($text);
+		}
 		/**
 		 * render takes one argument - the item being rendered - and it can either be a path or a page object
 		 * @access public
@@ -598,6 +630,10 @@ defined('C5_EXECUTE') or die("Access Denied.");
 				if (!isset($this->controller)) {
 					$this->controller = Loader::controller($view);
 					$this->controller->setupAndRun();
+				}
+
+				if ($this->controller->getRenderOverride() != '') {
+				   $view = $this->controller->getRenderOverride();
 				}
 				
 				// Determine which inner item to load, load it, and stick it in $innerContent
@@ -635,7 +671,6 @@ defined('C5_EXECUTE') or die("Access Denied.");
 						$themeFilename = $c->getCollectionHandle() . '.php';
 						
 					} else {
-
 						if (file_exists(DIR_BASE . '/' . DIRNAME_PAGE_TYPES . '/' . $ctHandle . '.php')) {
 							$content = DIR_BASE . '/' . DIRNAME_PAGE_TYPES . '/' . $ctHandle . '.php';
 							$wrapTemplateInTheme = true;
@@ -679,7 +714,23 @@ defined('C5_EXECUTE') or die("Access Denied.");
 					
 					// we're just passing something like "/login" or whatever. This will typically just be 
 					// internal Concrete stuff, but we also prepare for potentially having something in DIR_FILES_CONTENT (ie: the webroot)
-					if (file_exists(DIR_FILES_CONTENT . "/{$view}/" . FILENAME_COLLECTION_VIEW)) {
+					if (file_exists(DIR_FILES_CONTENT . "/{$view}/" . $this->viewPath.'/'.FILENAME_COLLECTION_VIEW)) {
+						$content = DIR_FILES_CONTENT . "/{$view}/" . $this->viewPath.'/'.FILENAME_COLLECTION_VIEW;
+					} else if (file_exists(DIR_FILES_CONTENT . "/{$view}.php")) {
+						$content = DIR_FILES_CONTENT . "/{$view}.php";
+					} else if (file_exists(DIR_FILES_CONTENT_REQUIRED . "/{$view}/" . $this->viewPath.'/'.FILENAME_COLLECTION_VIEW)) {
+						$content = DIR_FILES_CONTENT_REQUIRED . "/{$view}/" . $this->viewPath.'/'.FILENAME_COLLECTION_VIEW;
+					} else if (file_exists(DIR_FILES_CONTENT_REQUIRED . "/{$view}.php")) {
+						$content = DIR_FILES_CONTENT_REQUIRED . "/{$view}.php";
+					} else if ($this->getCollectionObject() != null && $this->getCollectionObject()->isGeneratedCollection() && $this->getCollectionObject()->getPackageID() > 0) {
+						//This is a single_page associated with a package, so check the package views as well
+						$pagePkgPath = Package::getByID($this->getCollectionObject()->getPackageID())->getPackagePath();
+						if (file_exists($pagePkgPath . "/single_pages/{$view}/" . $this->viewPath.'/'.FILENAME_COLLECTION_VIEW)) {
+							$content = $pagePkgPath . "/single_pages/{$view}/" . $this->viewPath.'/'.FILENAME_COLLECTION_VIEW;
+						} else if (file_exists($pagePkgPath . "/single_pages/{$view}.php")) {
+							$content = $pagePkgPath . "/single_pages/{$view}.php";
+						}
+					}elseif (file_exists(DIR_FILES_CONTENT . "/{$view}/" . FILENAME_COLLECTION_VIEW)) {
 						$content = DIR_FILES_CONTENT . "/{$view}/" . FILENAME_COLLECTION_VIEW;
 					} else if (file_exists(DIR_FILES_CONTENT . "/{$view}.php")) {
 						$content = DIR_FILES_CONTENT . "/{$view}.php";
@@ -687,6 +738,14 @@ defined('C5_EXECUTE') or die("Access Denied.");
 						$content = DIR_FILES_CONTENT_REQUIRED . "/{$view}/" . FILENAME_COLLECTION_VIEW;
 					} else if (file_exists(DIR_FILES_CONTENT_REQUIRED . "/{$view}.php")) {
 						$content = DIR_FILES_CONTENT_REQUIRED . "/{$view}.php";
+					} else if ($this->getCollectionObject() != null && $this->getCollectionObject()->isGeneratedCollection() && $this->getCollectionObject()->getPackageID() > 0) {
+						//This is a single_page associated with a package, so check the package views as well
+						$pagePkgPath = Package::getByID($this->getCollectionObject()->getPackageID())->getPackagePath();
+						if (file_exists($pagePkgPath . "/single_pages/{$view}/" . FILENAME_COLLECTION_VIEW)) {
+							$content = $pagePkgPath . "/single_pages/{$view}/" . FILENAME_COLLECTION_VIEW;
+						} else if (file_exists($pagePkgPath . "/single_pages/{$view}.php")) {
+							$content = $pagePkgPath . "/single_pages/{$view}.php";
+						}
 					}
 					$wrapTemplateInTheme = true;
 					$themeFilename = $view . '.php';
@@ -723,8 +782,24 @@ defined('C5_EXECUTE') or die("Access Denied.");
 				
 				if ($view instanceof Page) {
 					$_pageBlocks = $view->getBlocks();
+					$_pageBlocksGlobal = $view->getGlobalBlocks();
+					$_pageBlocks = array_merge($_pageBlocks, $_pageBlocksGlobal);
 					if ($view->supportsPageCache($_pageBlocks, $this->controller)) {
-						$view->renderFromCache();
+						$pageContent = $view->getFromPageCache();
+						if ($pageContent != false) {
+							Events::fire('on_before_render', $this);
+							if (defined('APP_CHARSET')) {
+								header("Content-Type: text/html; charset=" . APP_CHARSET);
+							}
+							print($pageContent);
+							Events::fire('on_render_complete', $this);
+							if (ob_get_level() == OB_INITIAL_LEVEL) {
+		
+								require(DIR_BASE_CORE . '/startup/shutdown.php');
+								exit;
+							}
+							return;
+						}
 					}
 					
 					foreach($_pageBlocks as $b1) {
@@ -735,6 +810,24 @@ defined('C5_EXECUTE') or die("Access Denied.");
 						}
 						$btc->runTask('on_page_view', array($view));
 					}
+					
+					// do we have any custom menu plugins?
+					$cp = new Permissions($view);
+					if ($cp->canWrite() || $cp->canAddSubContent() || $cp->canAdminPage() || $cp->canApproveCollection()) { 
+						$ih = Loader::helper('concrete/interface/menu');
+						$_interfaceItems = $ih->getPageHeaderMenuItems();
+						foreach($_interfaceItems as $_im) {
+							$_controller = $_im->getController();
+							$_controller->outputAutoHeaderItems();
+						}
+						unset($_interfaceItems);
+						unset($_im);
+						unset($_controller);
+					}
+					unset($_interfaceItems);
+					unset($_im);
+					unset($_controller);
+					
 					
 					// now, we output all the custom style records for the design tab in blocks/areas on the page
 					$c = $this->getCollectionObject();
@@ -770,15 +863,26 @@ defined('C5_EXECUTE') or die("Access Denied.");
 					include($this->theme);
 					$pageContent = ob_get_contents();
 					ob_end_clean();
-					global $cp;
-					global $c;
-					if(!$cp->canWrite() && !$c->isSystemPage()){
-						// Tinifier optimiser
-						$tiny = Loader::helper('tiny');
-						print $tiny->tinify($pageContent);
-					}else{
-						print $pageContent;
+					
+					$ret = Events::fire('on_page_output', $pageContent);
+					if($ret != '') {
+						if(!$cp->canWrite() && !$c->isSystemPage()){
+							// Tinifier optimiser
+							$tiny=Loader::helper('tiny');
+							print $tiny->tinify($ret);
+						}else{
+							print $ret;
+						}
+					} else {
+						if(!$cp->canWrite() && !$c->isSystemPage()){
+							// Tinifier optimiser
+							$tiny=Loader::helper('tiny');
+							print $tiny->tinify($pageContent);
+						}else{
+							print $pageContent;
+						}
 					}
+					
 					if ($view instanceof Page) {
 						if ($view->supportsPageCache($_pageBlocks, $this->controller)) {
 							$view->addToPageCache($pageContent);
