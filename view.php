@@ -865,6 +865,7 @@ defined('C5_EXECUTE') or die("Access Denied.");
 					ob_end_clean();
 					
 					$ret = Events::fire('on_page_output', $pageContent);
+					$cp = new Permissions($c);
 					if($ret != '') {
 						if(!$cp->canWrite() && !$c->isSystemPage()){
 							// Tinifier optimiser
